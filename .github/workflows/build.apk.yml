@@ -2,6 +2,9 @@ name: MotoCam APK Olustur
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -27,8 +30,9 @@ jobs:
 
       - name: MotoCam ZIP dosyasini ac
         run: |
+          rm -rf motocam
           mkdir motocam
-          unzip MotoCam_1.0_Full_Android.zip -d motocam
+          unzip -q MotoCam_1.0_Full_Android.zip -d motocam
           ls -la motocam
 
       - name: Gradle 8.9 kur
@@ -45,3 +49,4 @@ jobs:
         with:
           name: MotoCam-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
