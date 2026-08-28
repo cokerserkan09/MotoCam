@@ -34,7 +34,7 @@ jobs:
           mkdir motocam
           unzip -q MotoCam_1.0_Full_Android.zip -d motocam
 
-      - name: Sesli komut bip sesini kaldir
+      - name: Sesli komut bip sesini sistem kanalindan bastir
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -42,15 +42,13 @@ jobs:
           kt = Path("motocam/app/src/main/java/com/motocam/app/MainActivity.kt")
           text = kt.read_text(encoding="utf-8")
 
-          # Önceki v1.1 davranışlarını uygula.
+          # Tanıyıcının gereksiz hızlı yeniden başlama döngüsünü yavaşlat.
           text = text.replace('                    restartVoiceSoon()\n', '                    restartVoiceSoon(1800)\n', 1)
-          text = text.replace('                    if (voiceWanted) restartVoiceSoon(650)\n', '                    if (voiceWanted) restartVoiceSoon(2500)\n', 1)
+          text = text.replace('                    if (voiceWanted) restartVoiceSoon(650)\n', '                    if (voiceWanted) restartVoiceSoon(2200)\n', 1)
           text = text.replace('            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)\n', '', 1)
-          text = text.replace('            speechRecognizer?.cancel()\n            speechRecognizer?.startListening(intent)\n', '            startListeningSilently(intent)\n', 1)
-          text = text.replace('            speechRecognizer?.startListening(intent)\n', '            startListeningSilently(intent)\n', 1)
           text = text.replace('    private fun restartVoiceSoon(delayMs: Long = 400L) {\n', '    private fun restartVoiceSoon(delayMs: Long = 1800L) {\n', 1)
 
-          # Dinleme oturumunu mümkün olduğunca uzun tut.
+          # Dinleme oturumunu olabildiğince uzun tut.
           marker = '            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)\n'
           if marker in text and 'EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS' not in text:
               text = text.replace(marker, marker +
@@ -58,11 +56,24 @@ jobs:
                   '            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 300000L)\n'
                   '            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 300000L)\n', 1)
 
-          # SpeechRecognizer başlarken bazı telefonların çıkardığı sistem bipini kısa süre sessize al.
+          # Android/OEM'in SpeechRecognizer başlangıç-bitiş bipleri çoğunlukla STREAM_SYSTEM kanalından gelir.
+          # Bu sürüm müzik/intercom sesine dokunmaz; yalnızca sistem kanalını dinleme boyunca sessize alır.
+          text = text.replace('            speechRecognizer?.cancel()\n            speechRecognizer?.startListening(intent)\n', '            muteVoiceSystemBeeps()\n            speechRecognizer?.startListening(intent)\n', 1)
+          text = text.replace('            speechRecognizer?.startListening(intent)\n', '            muteVoiceSystemBeeps()\n            speechRecognizer?.startListening(intent)\n', 1)
+
           fn_marker = '    private fun restartVoiceSoon('
-          helper = '''    private fun startListeningSilently(intent: android.content.Intent) {\n        val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n        val musicStream = android.media.AudioManager.STREAM_MUSIC\n        val systemStream = android.media.AudioManager.STREAM_SYSTEM\n        val oldMusic = audio.getStreamVolume(musicStream)\n        val oldSystem = audio.getStreamVolume(systemStream)\n        try {\n            audio.setStreamVolume(musicStream, 0, 0)\n            audio.setStreamVolume(systemStream, 0, 0)\n            speechRecognizer?.startListening(intent)\n        } finally {\n            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({\n                try { audio.setStreamVolume(musicStream, oldMusic, 0) } catch (_: Exception) {}\n                try { audio.setStreamVolume(systemStream, oldSystem, 0) } catch (_: Exception) {}\n            }, 700L)\n        }\n    }\n\n'''
-          if fn_marker in text and 'private fun startListeningSilently' not in text:
+          helper = '''    private var savedSystemVolume: Int? = null\n\n    private fun muteVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            if (savedSystemVolume == null) savedSystemVolume = audio.getStreamVolume(stream)\n            if (audio.getStreamVolume(stream) != 0) audio.setStreamVolume(stream, 0, 0)\n        } catch (_: Exception) {}\n    }\n\n    private fun restoreVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            savedSystemVolume?.let { audio.setStreamVolume(stream, it, 0) }\n            savedSystemVolume = null\n        } catch (_: Exception) {}\n    }\n\n'''
+          if fn_marker in text and 'private fun muteVoiceSystemBeeps' not in text:
               text = text.replace(fn_marker, helper + fn_marker, 1)
+
+          # Uygulama kapanırken telefonun sistem ses seviyesini mutlaka geri getir.
+          if 'override fun onDestroy()' in text and 'restoreVoiceSystemBeeps()' not in text:
+              text = text.replace('override fun onDestroy() {', 'override fun onDestroy() {\n        restoreVoiceSystemBeeps()', 1)
+          elif 'override fun onDestroy()' not in text:
+              # Sınıfın son kapanışından hemen önce güvenli onDestroy ekle.
+              idx = text.rfind('\n}')
+              if idx != -1:
+                  text = text[:idx] + '''\n\n    override fun onDestroy() {\n        restoreVoiceSystemBeeps()\n        try { speechRecognizer?.destroy() } catch (_: Exception) {}\n        super.onDestroy()\n    }\n''' + text[idx:]
 
           kt.write_text(text, encoding="utf-8")
 
@@ -70,12 +81,12 @@ jobs:
           m = manifest.read_text(encoding="utf-8")
           perm = '<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />'
           if perm not in m:
-              if '<manifest' in m:
-                  end = m.find('>')
+              end = m.find('>')
+              if end != -1:
                   m = m[:end+1] + '\n    ' + perm + m[end+1:]
           manifest.write_text(m, encoding="utf-8")
 
-          print("MotoCam v1.2 bip bastirma duzeltmesi uygulandi.")
+          print("MotoCam v1.3 sistem bip bastirma duzeltmesi uygulandi.")
           PY
 
       - name: Gradle 8.9 kur
@@ -90,6 +101,6 @@ jobs:
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v1.2-APK
+          name: MotoCam-v1.3-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
