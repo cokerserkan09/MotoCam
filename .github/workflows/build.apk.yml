@@ -35,6 +35,11 @@ jobs:
           unzip -q MotoCam_1.0_Full_Android.zip -d motocam
           ls -la motocam
 
+      - name: Sesli komut kodunu bul
+        run: |
+          echo "=== SpeechRecognizer / RecognizerIntent eslesmeleri ==="
+          grep -R -n -E "SpeechRecognizer|RecognizerIntent|startListening|RecognitionListener|AudioManager|TONE_|beep|bip" motocam/app/src || true
+
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
