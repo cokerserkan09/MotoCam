@@ -34,44 +34,48 @@ jobs:
           mkdir motocam
           unzip -q MotoCam_1.0_Full_Android.zip -d motocam
 
-      - name: Sesli komut bip dongusunu duzelt
+      - name: Sesli komut bip sesini kaldir
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path("motocam/app/src/main/java/com/motocam/app/MainActivity.kt")
-          text = path.read_text(encoding="utf-8")
+          kt = Path("motocam/app/src/main/java/com/motocam/app/MainActivity.kt")
+          text = kt.read_text(encoding="utf-8")
 
-          changes = [
-              (
-                  '                    restartVoiceSoon()\n',
-                  '                    restartVoiceSoon(1500)\n'
-              ),
-              (
-                  '                    if (voiceWanted) restartVoiceSoon(650)\n',
-                  '                    if (voiceWanted) restartVoiceSoon(1800)\n'
-              ),
-              (
-                  '            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)\n',
-                  ''
-              ),
-              (
-                  '            speechRecognizer?.cancel()\n            speechRecognizer?.startListening(intent)\n',
-                  '            speechRecognizer?.startListening(intent)\n'
-              ),
-              (
-                  '    private fun restartVoiceSoon(delayMs: Long = 400L) {\n',
-                  '    private fun restartVoiceSoon(delayMs: Long = 1500L) {\n'
-              ),
-          ]
+          # Önceki v1.1 davranışlarını uygula.
+          text = text.replace('                    restartVoiceSoon()\n', '                    restartVoiceSoon(1800)\n', 1)
+          text = text.replace('                    if (voiceWanted) restartVoiceSoon(650)\n', '                    if (voiceWanted) restartVoiceSoon(2500)\n', 1)
+          text = text.replace('            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)\n', '', 1)
+          text = text.replace('            speechRecognizer?.cancel()\n            speechRecognizer?.startListening(intent)\n', '            startListeningSilently(intent)\n', 1)
+          text = text.replace('            speechRecognizer?.startListening(intent)\n', '            startListeningSilently(intent)\n', 1)
+          text = text.replace('    private fun restartVoiceSoon(delayMs: Long = 400L) {\n', '    private fun restartVoiceSoon(delayMs: Long = 1800L) {\n', 1)
 
-          for old, new in changes:
-              if old not in text:
-                  raise SystemExit(f"Beklenen kod bulunamadi: {old!r}")
-              text = text.replace(old, new, 1)
+          # Dinleme oturumunu mümkün olduğunca uzun tut.
+          marker = '            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)\n'
+          if marker in text and 'EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS' not in text:
+              text = text.replace(marker, marker +
+                  '            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 300000L)\n'
+                  '            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 300000L)\n'
+                  '            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 300000L)\n', 1)
 
-          path.write_text(text, encoding="utf-8")
-          print("MotoCam v1.1 sesli komut duzeltmesi uygulandi.")
+          # SpeechRecognizer başlarken bazı telefonların çıkardığı sistem bipini kısa süre sessize al.
+          fn_marker = '    private fun restartVoiceSoon('
+          helper = '''    private fun startListeningSilently(intent: android.content.Intent) {\n        val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n        val musicStream = android.media.AudioManager.STREAM_MUSIC\n        val systemStream = android.media.AudioManager.STREAM_SYSTEM\n        val oldMusic = audio.getStreamVolume(musicStream)\n        val oldSystem = audio.getStreamVolume(systemStream)\n        try {\n            audio.setStreamVolume(musicStream, 0, 0)\n            audio.setStreamVolume(systemStream, 0, 0)\n            speechRecognizer?.startListening(intent)\n        } finally {\n            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({\n                try { audio.setStreamVolume(musicStream, oldMusic, 0) } catch (_: Exception) {}\n                try { audio.setStreamVolume(systemStream, oldSystem, 0) } catch (_: Exception) {}\n            }, 700L)\n        }\n    }\n\n'''
+          if fn_marker in text and 'private fun startListeningSilently' not in text:
+              text = text.replace(fn_marker, helper + fn_marker, 1)
+
+          kt.write_text(text, encoding="utf-8")
+
+          manifest = Path("motocam/app/src/main/AndroidManifest.xml")
+          m = manifest.read_text(encoding="utf-8")
+          perm = '<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />'
+          if perm not in m:
+              if '<manifest' in m:
+                  end = m.find('>')
+                  m = m[:end+1] + '\n    ' + perm + m[end+1:]
+          manifest.write_text(m, encoding="utf-8")
+
+          print("MotoCam v1.2 bip bastirma duzeltmesi uygulandi.")
           PY
 
       - name: Gradle 8.9 kur
@@ -86,6 +90,6 @@ jobs:
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v1.1-APK
+          name: MotoCam-v1.2-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
