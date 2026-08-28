@@ -114,31 +114,31 @@ replacement = '''    private fun startVoiceControl() {
         }
         if (spoken.isBlank()) return
 
-        val normalized = spoken.lowercase(Locale("tr", "TR"))
+        val normalized = spoken.lowercase(Locale.ROOT)
         binding.tvVoice.text = "Duyuldu: $spoken"
 
         val now = System.currentTimeMillis()
         if (now - lastVoiceCommandMs < 1200L) return
 
+        val words = normalized
+            .replace(Regex("[^a-z ]"), " ")
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+
         when {
-            normalized.contains("başla") ||
-                normalized.contains("basla") ||
-                normalized.contains("kayıt başla") ||
-                normalized.contains("kayit basla") -> {
+            words.contains("start") -> {
                 if (activeRecording == null) {
                     lastVoiceCommandMs = now
                     startRecording()
-                    binding.tvVoice.text = "Komut alındı: BAŞLA"
+                    binding.tvVoice.text = "Komut alındı: START"
                 }
             }
 
-            normalized.contains("dur") ||
-                normalized.contains("kaydı durdur") ||
-                normalized.contains("kaydi durdur") -> {
+            words.contains("stop") -> {
                 if (activeRecording != null) {
                     lastVoiceCommandMs = now
                     stopRecording()
-                    binding.tvVoice.text = "Komut alındı: DUR"
+                    binding.tvVoice.text = "Komut alındı: STOP"
                 }
             }
         }
@@ -152,6 +152,42 @@ replacement = '''    private fun startVoiceControl() {
 
 '''
 text = text[:start] + replacement + text[end:]
+
+# Kayıt başladığında ve bittiğinde interkomdan duyulacak kısa onay tonları.
+helper_marker = "    private fun startRecording() {"
+helpers = '''    private fun playRecordingStartedSound() {
+        try {
+            val tone = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 90)
+            tone.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 220)
+            uiHandler.postDelayed({ try { tone.release() } catch (_: Exception) {} }, 350)
+        } catch (_: Exception) {}
+    }
+
+    private fun playRecordingStoppedSound() {
+        try {
+            val tone = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 90)
+            tone.startTone(android.media.ToneGenerator.TONE_PROP_NACK, 300)
+            uiHandler.postDelayed({ try { tone.release() } catch (_: Exception) {} }, 450)
+        } catch (_: Exception) {}
+    }
+
+'''
+if helper_marker in text and "private fun playRecordingStartedSound" not in text:
+    text = text.replace(helper_marker, helpers + helper_marker, 1)
+
+started_marker = '        binding.tvStatus.text = "● KAYIT"\n'
+if started_marker in text and "playRecordingStartedSound()" not in text[text.find("private fun onRecordingStarted"):text.find("private fun onRecordingFinalized")]:
+    text = text.replace(started_marker, started_marker + "        playRecordingStartedSound()\n", 1)
+
+finalized_marker = '        binding.switchStabilization.isEnabled = true\n'
+finalized_start = text.find("private fun onRecordingFinalized")
+if finalized_start != -1:
+    finalized_end = text.find("    private fun stopRecording()", finalized_start)
+    finalized_block = text[finalized_start:finalized_end]
+    if "playRecordingStoppedSound()" not in finalized_block and finalized_marker in finalized_block:
+        pos = text.find(finalized_marker, finalized_start)
+        pos += len(finalized_marker)
+        text = text[:pos] + "        playRecordingStoppedSound()\n" + text[pos:]
 
 old_destroy = "        speechRecognizer?.destroy()\n        speechRecognizer = null\n"
 new_destroy = "        stopVoiceControl()\n        try { voskModel?.close() } catch (_: Exception) {}\n        voskModel = null\n"
@@ -174,8 +210,8 @@ if "com.alphacephei:vosk-android" not in g:
         "    implementation(\"com.alphacephei:vosk-android:0.3.47@aar\")\n",
         1,
     )
-g = g.replace("versionCode = 2", "versionCode = 5")
-g = g.replace('versionName = "1.0.0"', 'versionName = "1.5.0"')
+g = g.replace("versionCode = 2", "versionCode = 7")
+g = g.replace('versionName = "1.0.0"', 'versionName = "1.7.0"')
 gradle.write_text(g, encoding="utf-8")
 
 manifest = Path("motocam/app/src/main/AndroidManifest.xml")
@@ -183,4 +219,4 @@ m = manifest.read_text(encoding="utf-8")
 m = m.replace('    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n', "")
 manifest.write_text(m, encoding="utf-8")
 
-print("MotoCam v1.5: SpeechRecognizer kaldirildi, Vosk surekli dinleme eklendi.")
+print("MotoCam v1.7: START/STOP komutlari ve kayit onay sesleri eklendi.")
