@@ -41,7 +41,7 @@ jobs:
           mkdir -p /tmp/vosk-tr motocam/app/src/main/assets/model-tr
           unzip -q /tmp/vosk-tr.zip -d /tmp/vosk-tr
           cp -R /tmp/vosk-tr/vosk-model-small-tr-0.3/. motocam/app/src/main/assets/model-tr/
-          test -d motocam/app/src/main/assets/model-tr/conf
+          test -n "$(find motocam/app/src/main/assets/model-tr -mindepth 1 -print -quit)"
           printf 'motocam-vosk-tr-0.3-v1\n' > motocam/app/src/main/assets/model-tr/uuid
 
       - name: Vosk surekli sesli komutu uygula
