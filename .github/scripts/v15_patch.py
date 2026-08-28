@@ -122,15 +122,15 @@ replacement = '''    private fun startVoiceControl() {
 
         val words = normalized
             .replace(Regex("[^a-z ]"), " ")
-            .split(Regex("\\s+"))
+            .split(' ')
             .filter { it.isNotBlank() }
 
         when {
-            words.contains("star") -> {
+            words.contains("start") -> {
                 if (activeRecording == null) {
                     lastVoiceCommandMs = now
                     startRecording()
-                    binding.tvVoice.text = "Komut alındı: STAR"
+                    binding.tvVoice.text = "Komut alındı: START"
                 }
             }
 
@@ -219,4 +219,4 @@ m = manifest.read_text(encoding="utf-8")
 m = m.replace('    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n', "")
 manifest.write_text(m, encoding="utf-8")
 
-print("MotoCam v1.7: STAR/STOP komutlari ve kayit onay sesleri eklendi.")
+print("MotoCam v1.7: START/STOP komutlari ve kayit onay sesleri eklendi.")
