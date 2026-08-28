@@ -42,13 +42,11 @@ jobs:
           kt = Path("motocam/app/src/main/java/com/motocam/app/MainActivity.kt")
           text = kt.read_text(encoding="utf-8")
 
-          # Tanıyıcının gereksiz hızlı yeniden başlama döngüsünü yavaşlat.
           text = text.replace('                    restartVoiceSoon()\n', '                    restartVoiceSoon(1800)\n', 1)
           text = text.replace('                    if (voiceWanted) restartVoiceSoon(650)\n', '                    if (voiceWanted) restartVoiceSoon(2200)\n', 1)
           text = text.replace('            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)\n', '', 1)
           text = text.replace('    private fun restartVoiceSoon(delayMs: Long = 400L) {\n', '    private fun restartVoiceSoon(delayMs: Long = 1800L) {\n', 1)
 
-          # Dinleme oturumunu olabildiğince uzun tut.
           marker = '            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)\n'
           if marker in text and 'EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS' not in text:
               text = text.replace(marker, marker +
@@ -56,21 +54,24 @@ jobs:
                   '            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 300000L)\n'
                   '            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 300000L)\n', 1)
 
-          # Android/OEM'in SpeechRecognizer başlangıç-bitiş bipleri çoğunlukla STREAM_SYSTEM kanalından gelir.
-          # Bu sürüm müzik/intercom sesine dokunmaz; yalnızca sistem kanalını dinleme boyunca sessize alır.
-          text = text.replace('            speechRecognizer?.cancel()\n            speechRecognizer?.startListening(intent)\n', '            muteVoiceSystemBeeps()\n            speechRecognizer?.startListening(intent)\n', 1)
-          text = text.replace('            speechRecognizer?.startListening(intent)\n', '            muteVoiceSystemBeeps()\n            speechRecognizer?.startListening(intent)\n', 1)
+          old_cancel_start = '            speechRecognizer?.cancel()\n            speechRecognizer?.startListening(intent)\n'
+          old_start = '            speechRecognizer?.startListening(intent)\n'
+          new_start = '            muteVoiceSystemBeeps()\n            speechRecognizer?.startListening(intent)\n'
+          if old_cancel_start in text:
+              text = text.replace(old_cancel_start, new_start, 1)
+          elif old_start in text:
+              text = text.replace(old_start, new_start, 1)
 
           fn_marker = '    private fun restartVoiceSoon('
           helper = '''    private var savedSystemVolume: Int? = null\n\n    private fun muteVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            if (savedSystemVolume == null) savedSystemVolume = audio.getStreamVolume(stream)\n            if (audio.getStreamVolume(stream) != 0) audio.setStreamVolume(stream, 0, 0)\n        } catch (_: Exception) {}\n    }\n\n    private fun restoreVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            savedSystemVolume?.let { audio.setStreamVolume(stream, it, 0) }\n            savedSystemVolume = null\n        } catch (_: Exception) {}\n    }\n\n'''
           if fn_marker in text and 'private fun muteVoiceSystemBeeps' not in text:
               text = text.replace(fn_marker, helper + fn_marker, 1)
 
-          # Uygulama kapanırken telefonun sistem ses seviyesini mutlaka geri getir.
-          if 'override fun onDestroy()' in text and 'restoreVoiceSystemBeeps()' not in text:
-              text = text.replace('override fun onDestroy() {', 'override fun onDestroy() {\n        restoreVoiceSystemBeeps()', 1)
-          elif 'override fun onDestroy()' not in text:
-              # Sınıfın son kapanışından hemen önce güvenli onDestroy ekle.
+          if 'override fun onDestroy() {' in text:
+              target = 'override fun onDestroy() {\n        restoreVoiceSystemBeeps()'
+              if target not in text:
+                  text = text.replace('override fun onDestroy() {', 'override fun onDestroy() {\n        restoreVoiceSystemBeeps()', 1)
+          else:
               idx = text.rfind('\n}')
               if idx != -1:
                   text = text[:idx] + '''\n\n    override fun onDestroy() {\n        restoreVoiceSystemBeeps()\n        try { speechRecognizer?.destroy() } catch (_: Exception) {}\n        super.onDestroy()\n    }\n''' + text[idx:]
@@ -81,12 +82,15 @@ jobs:
           m = manifest.read_text(encoding="utf-8")
           perm = '<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />'
           if perm not in m:
-              end = m.find('>')
-              if end != -1:
-                  m = m[:end+1] + '\n    ' + perm + m[end+1:]
+              manifest_start = m.find('<manifest')
+              manifest_end = m.find('>', manifest_start)
+              if manifest_start != -1 and manifest_end != -1:
+                  m = m[:manifest_end+1] + '\n    ' + perm + m[manifest_end+1:]
+              else:
+                  raise SystemExit('AndroidManifest.xml manifest etiketi bulunamadi')
           manifest.write_text(m, encoding="utf-8")
 
-          print("MotoCam v1.3 sistem bip bastirma duzeltmesi uygulandi.")
+          print("MotoCam v1.3 bip duzeltmesi uygulandi.")
           PY
 
       - name: Gradle 8.9 kur
