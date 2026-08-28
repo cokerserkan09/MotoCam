@@ -34,7 +34,7 @@ jobs:
           mkdir motocam
           unzip -q MotoCam_1.0_Full_Android.zip -d motocam
 
-      - name: Sesli komut bip sesini sistem kanalindan bastir
+      - name: Sesli komut bip sesini bastir ve zil modunu koru
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -63,7 +63,7 @@ jobs:
               text = text.replace(old_start, new_start, 1)
 
           fn_marker = '    private fun restartVoiceSoon('
-          helper = '''    private var savedSystemVolume: Int? = null\n\n    private fun muteVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            if (savedSystemVolume == null) savedSystemVolume = audio.getStreamVolume(stream)\n            if (audio.getStreamVolume(stream) != 0) audio.setStreamVolume(stream, 0, 0)\n        } catch (_: Exception) {}\n    }\n\n    private fun restoreVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            savedSystemVolume?.let { audio.setStreamVolume(stream, it, 0) }\n            savedSystemVolume = null\n        } catch (_: Exception) {}\n    }\n\n'''
+          helper = '''    private var savedSystemVolume: Int? = null\n    private var savedRingerMode: Int? = null\n\n    private fun muteVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            if (savedSystemVolume == null) savedSystemVolume = audio.getStreamVolume(stream)\n            if (savedRingerMode == null) savedRingerMode = audio.ringerMode\n            if (audio.getStreamVolume(stream) != 0) {\n                audio.setStreamVolume(stream, 0, android.media.AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE)\n            }\n            savedRingerMode?.let { originalMode ->\n                if (audio.ringerMode != originalMode) {\n                    try { audio.ringerMode = originalMode } catch (_: Exception) {}\n                }\n            }\n        } catch (_: Exception) {}\n    }\n\n    private fun restoreVoiceSystemBeeps() {\n        try {\n            val audio = getSystemService(AUDIO_SERVICE) as android.media.AudioManager\n            val stream = android.media.AudioManager.STREAM_SYSTEM\n            savedSystemVolume?.let { audio.setStreamVolume(stream, it, android.media.AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE) }\n            savedRingerMode?.let { originalMode ->\n                if (audio.ringerMode != originalMode) {\n                    try { audio.ringerMode = originalMode } catch (_: Exception) {}\n                }\n            }\n            savedSystemVolume = null\n            savedRingerMode = null\n        } catch (_: Exception) {}\n    }\n\n'''
           if fn_marker in text and 'private fun muteVoiceSystemBeeps' not in text:
               text = text.replace(fn_marker, helper + fn_marker, 1)
 
@@ -90,7 +90,7 @@ jobs:
                   raise SystemExit('AndroidManifest.xml manifest etiketi bulunamadi')
           manifest.write_text(m, encoding="utf-8")
 
-          print("MotoCam v1.3 bip duzeltmesi uygulandi.")
+          print("MotoCam v1.4 bip bastirma + zil modu koruma uygulandi.")
           PY
 
       - name: Gradle 8.9 kur
@@ -105,6 +105,6 @@ jobs:
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v1.3-APK
+          name: MotoCam-v1.4-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
