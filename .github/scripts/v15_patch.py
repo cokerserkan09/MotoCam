@@ -121,24 +121,24 @@ replacement = '''    private fun startVoiceControl() {
         if (now - lastVoiceCommandMs < 1200L) return
 
         val words = normalized
-            .replace(Regex("[^a-z ]"), " ")
+            .replace(Regex("[^a-zçğıöşü ]"), " ")
             .split(' ')
             .filter { it.isNotBlank() }
 
         when {
-            words.contains("start") -> {
+            words.contains("bir") -> {
                 if (activeRecording == null) {
                     lastVoiceCommandMs = now
                     startRecording()
-                    binding.tvVoice.text = "Komut alındı: START"
+                    binding.tvVoice.text = "Komut alındı: BİR"
                 }
             }
 
-            words.contains("stop") -> {
+            words.contains("iki") -> {
                 if (activeRecording != null) {
                     lastVoiceCommandMs = now
                     stopRecording()
-                    binding.tvVoice.text = "Komut alındı: STOP"
+                    binding.tvVoice.text = "Komut alındı: İKİ"
                 }
             }
         }
@@ -153,7 +153,6 @@ replacement = '''    private fun startVoiceControl() {
 '''
 text = text[:start] + replacement + text[end:]
 
-# Kayıt başladığında ve bittiğinde interkomdan duyulacak kısa onay tonları.
 helper_marker = "    private fun startRecording() {"
 helpers = '''    private fun playRecordingStartedSound() {
         try {
@@ -196,6 +195,9 @@ if old_destroy in text:
 else:
     print("Uyari: eski onDestroy SpeechRecognizer satirlari bulunamadi")
 
+if 'Komut alındı: BİR' not in text or 'Komut alındı: İKİ' not in text:
+    raise SystemExit("BIR/IKI komutlari uygulanamadi")
+
 kt.write_text(text, encoding="utf-8")
 
 gradle = Path("motocam/app/build.gradle.kts")
@@ -210,8 +212,8 @@ if "com.alphacephei:vosk-android" not in g:
         "    implementation(\"com.alphacephei:vosk-android:0.3.47@aar\")\n",
         1,
     )
-g = g.replace("versionCode = 2", "versionCode = 7")
-g = g.replace('versionName = "1.0.0"', 'versionName = "1.7.0"')
+g = g.replace("versionCode = 2", "versionCode = 8")
+g = g.replace('versionName = "1.0.0"', 'versionName = "1.8.0"')
 gradle.write_text(g, encoding="utf-8")
 
 manifest = Path("motocam/app/src/main/AndroidManifest.xml")
@@ -219,4 +221,4 @@ m = manifest.read_text(encoding="utf-8")
 m = m.replace('    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n', "")
 manifest.write_text(m, encoding="utf-8")
 
-print("MotoCam v1.7: START/STOP komutlari ve kayit onay sesleri eklendi.")
+print("MotoCam v1.8: BIR/IKI komutlari ve kayit onay sesleri eklendi.")
