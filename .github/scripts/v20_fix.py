@@ -30,6 +30,7 @@ new = '''        val commandText = normalized.trim()
                 lastVoiceCommandMs = now
                 runOnUiThread {
                     binding.tvVoice.text = "Komut alındı: SERKAN"
+                    playRecordingStoppedSound()
                     stopRecording()
                 }
             }
@@ -75,14 +76,14 @@ else:
 text = text.replace('Sesli komut: “Başla” / “Dur”', 'Sesli komut: “BİR” / “SERKAN”')
 text = text.replace('Sesli komut: "Başla" / "Dur"', 'Sesli komut: "BİR" / "SERKAN"')
 
-# Surumu 2.2 yap.
+# Surumu 2.3 yap.
 gradle = Path("motocam/app/build.gradle.kts")
 g = gradle.read_text(encoding="utf-8")
-g = g.replace("versionCode = 9", "versionCode = 12")
-g = g.replace("versionCode = 10", "versionCode = 12")
-g = g.replace('versionName = "1.9.0"', 'versionName = "2.2.0"')
-g = g.replace('versionName = "2.0.0"', 'versionName = "2.2.0"')
+g = g.replace("versionCode = 9", "versionCode = 13")
+g = g.replace("versionCode = 10", "versionCode = 13")
+g = g.replace('versionName = "1.9.0"', 'versionName = "2.3.0"')
+g = g.replace('versionName = "2.0.0"', 'versionName = "2.3.0"')
 gradle.write_text(g, encoding="utf-8")
 
 kt.write_text(text, encoding="utf-8")
-print("MotoCam v2.2: BIR kaydi baslatir, SERKAN kaydi durdurur.")
+print("MotoCam v2.3: BIR baslatir, SERKAN durdurur ve durdurma sesi komut aninda calar.")
