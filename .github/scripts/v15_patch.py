@@ -135,11 +135,9 @@ replacement = '''    private fun startVoiceControl() {
             }
 
             words.contains("iki") -> {
-                if (activeRecording != null) {
-                    lastVoiceCommandMs = now
-                    stopRecording()
-                    binding.tvVoice.text = "Komut alındı: İKİ"
-                }
+                lastVoiceCommandMs = now
+                binding.tvVoice.text = "Komut alındı: İKİ"
+                stopRecording()
             }
         }
     }
@@ -212,8 +210,8 @@ if "com.alphacephei:vosk-android" not in g:
         "    implementation(\"com.alphacephei:vosk-android:0.3.47@aar\")\n",
         1,
     )
-g = g.replace("versionCode = 2", "versionCode = 8")
-g = g.replace('versionName = "1.0.0"', 'versionName = "1.8.0"')
+g = g.replace("versionCode = 2", "versionCode = 9")
+g = g.replace('versionName = "1.0.0"', 'versionName = "1.9.0"')
 gradle.write_text(g, encoding="utf-8")
 
 manifest = Path("motocam/app/src/main/AndroidManifest.xml")
@@ -221,4 +219,4 @@ m = manifest.read_text(encoding="utf-8")
 m = m.replace('    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n', "")
 manifest.write_text(m, encoding="utf-8")
 
-print("MotoCam v1.8: BIR/IKI komutlari ve kayit onay sesleri eklendi.")
+print("MotoCam v1.9: BIR baslatir, IKI kosulsuz stopRecording cagirir.")
