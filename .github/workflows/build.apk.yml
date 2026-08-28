@@ -47,11 +47,11 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import base64
 
           kt = Path("motocam/app/src/main/java/com/motocam/app/MainActivity.kt")
           text = kt.read_text(encoding="utf-8")
 
-          # Android SpeechRecognizer importlarini tamamen kaldir.
           for line in [
               'import android.speech.RecognitionListener\n',
               'import android.speech.RecognizerIntent\n',
@@ -73,138 +73,14 @@ jobs:
           if start == -1 or end == -1:
               raise SystemExit('Sesli komut blogu bulunamadi')
 
-          replacement = r'''    private fun startVoiceControl() {
-        if (!voiceWanted || !hasMicPermission()) return
-
-        tryRouteBluetoothMic()
-
-        if (speechService != null) {
-            binding.tvVoice.text = "Sesli komut: sürekli dinliyor"
-            return
-        }
-        if (voiceInitStarted) return
-        voiceInitStarted = true
-        binding.tvVoice.text = "Sesli komut modeli hazırlanıyor..."
-
-        org.vosk.android.StorageService.unpack(
-            this,
-            "model-tr",
-            "model-tr",
-            { model ->
-                voiceInitStarted = false
-                voskModel = model
-                if (voiceWanted && binding.switchVoice.isChecked) {
-                    startVoskListening()
-                }
-            },
-            { exception ->
-                voiceInitStarted = false
-                binding.tvVoice.text = "Sesli komut modeli açılamadı"
-                toast("Sesli komut hatası: ${exception.message ?: "bilinmeyen hata"}")
-            }
-        )
-    }
-
-    private fun startVoskListening() {
-        if (!voiceWanted || !binding.switchVoice.isChecked || !hasMicPermission()) return
-        val model = voskModel ?: return
-        if (speechService != null) return
-
-        try {
-            val recognizer = org.vosk.Recognizer(model, 16000.0f)
-            val service = org.vosk.android.SpeechService(recognizer, 16000.0f)
-            speechService = service
-            binding.tvVoice.text = "Sesli komut: sürekli dinliyor"
-            service.startListening(object : org.vosk.android.RecognitionListener {
-                override fun onPartialResult(hypothesis: String?) {
-                    handleVoskResult(hypothesis)
-                }
-
-                override fun onResult(hypothesis: String?) {
-                    handleVoskResult(hypothesis)
-                }
-
-                override fun onFinalResult(hypothesis: String?) {
-                    handleVoskResult(hypothesis)
-                }
-
-                override fun onError(exception: Exception?) {
-                    speechService = null
-                    binding.tvVoice.text = "Sesli komut yeniden başlatılıyor"
-                    if (voiceWanted && binding.switchVoice.isChecked) {
-                        binding.root.postDelayed({ startVoskListening() }, 800)
-                    }
-                }
-
-                override fun onTimeout() {
-                    speechService = null
-                    if (voiceWanted && binding.switchVoice.isChecked) {
-                        binding.root.postDelayed({ startVoskListening() }, 200)
-                    }
-                }
-            })
-        } catch (e: Exception) {
-            speechService = null
-            binding.tvVoice.text = "Sesli komut başlatılamadı"
-            toast("Sesli komut hatası: ${e.message ?: "bilinmeyen hata"}")
-        }
-    }
-
-    private fun handleVoskResult(json: String?) {
-        if (json.isNullOrBlank()) return
-        val spoken = try {
-            val obj = org.json.JSONObject(json)
-            val partial = obj.optString("partial", "")
-            if (partial.isNotBlank()) partial else obj.optString("text", "")
-        } catch (_: Exception) {
-            ""
-        }
-        if (spoken.isBlank()) return
-
-        val normalized = spoken.lowercase(Locale("tr", "TR"))
-        binding.tvVoice.text = "Duyuldu: $spoken"
-
-        val now = System.currentTimeMillis()
-        if (now - lastVoiceCommandMs < 1200L) return
-
-        when {
-            normalized.contains("başla") ||
-                normalized.contains("basla") ||
-                normalized.contains("kayıt başla") ||
-                normalized.contains("kayit basla") -> {
-                if (activeRecording == null) {
-                    lastVoiceCommandMs = now
-                    startRecording()
-                    binding.tvVoice.text = "Komut alındı: BAŞLA"
-                }
-            }
-
-            normalized.contains("dur") ||
-                normalized.contains("kaydı durdur") ||
-                normalized.contains("kaydi durdur") -> {
-                if (activeRecording != null) {
-                    lastVoiceCommandMs = now
-                    stopRecording()
-                    binding.tvVoice.text = "Komut alındı: DUR"
-                }
-            }
-        }
-    }
-
-    private fun stopVoiceControl() {
-        try { speechService?.stop() } catch (_: Exception) {}
-        try { speechService?.shutdown() } catch (_: Exception) {}
-        speechService = null
-    }
-
-'''
+          replacement_b64 = 'ICAgIHByaXZhdGUgZnVuIHN0YXJ0Vm9pY2VDb250cm9sKCkgewogICAgICAgIGlmICghdm9pY2VXYW50ZWQgfHwgIWhhc01pY1Blcm1pc3Npb24oKSkgcmV0dXJuCgogICAgICAgIHRyeVJvdXRlQmx1ZXRvb3RoTWljKCkKCiAgICAgICAgaWYgKHNwZWVjaFNlcnZpY2UgIT0gbnVsbCkgewogICAgICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJTZXNsaSBrb211dDogc8O8cmVrbGkgZGlubGl5b3IiCiAgICAgICAgICAgIHJldHVybgogICAgICAgIH0KICAgICAgICBpZiAodm9pY2VJbml0U3RhcnRlZCkgcmV0dXJuCiAgICAgICAgdm9pY2VJbml0U3RhcnRlZCA9IHRydWUKICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJTZXNsaSBrb211dCBtb2RlbGkgaGF6xLFybGFuxLF5b3IuLi4iCgogICAgICAgIG9yZy52b3NrLmFuZHJvaWQuU3RvcmFnZVNlcnZpY2UudW5wYWNrKAogICAgICAgICAgICB0aGlzLAogICAgICAgICAgICAibW9kZWwtdHIiLAogICAgICAgICAgICAibW9kZWwtdHIiLAogICAgICAgICAgICB7IG1vZGVsIC0+CiAgICAgICAgICAgICAgICB2b2ljZUluaXRTdGFydGVkID0gZmFsc2UKICAgICAgICAgICAgICAgIHZvc2tNb2RlbCA9IG1vZGVsCiAgICAgICAgICAgICAgICBpZiAodm9pY2VXYW50ZWQgJiYgYmluZGluZy5zd2l0Y2hWb2ljZS5pc0NoZWNrZWQpIHsKICAgICAgICAgICAgICAgICAgICBzdGFydFZvc2tMaXN0ZW5pbmcoKQogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9LAogICAgICAgICAgICB7IGV4Y2VwdGlvbiAtPgogICAgICAgICAgICAgICAgdm9pY2VJbml0U3RhcnRlZCA9IGZhbHNlCiAgICAgICAgICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJTZXNsaSBrb211dCBtb2RlbGkgYcOnxLFsYW1hZMSxIgogICAgICAgICAgICAgICAgdG9hc3QoIlNlc2xpIGtvbXV0IGhhdGFzxLE6ICR7ZXhjZXB0aW9uLm1lc3NhZ2UgPzogImJpbGlubWV5ZW4gaGF0YSJ9IikKICAgICAgICAgICAgfQogICAgICAgICkKICAgIH0KCiAgICBwcml2YXRlIGZ1biBzdGFydFZvc2tMaXN0ZW5pbmcoKSB7CiAgICAgICAgaWYgKCF2b2ljZVdhbnRlZCB8fCAhYmluZGluZy5zd2l0Y2hWb2ljZS5pc0NoZWNrZWQgfHwgIWhhc01pY1Blcm1pc3Npb24oKSkgcmV0dXJuCiAgICAgICAgdmFsIG1vZGVsID0gdm9za01vZGVsID86IHJldHVybgogICAgICAgIGlmIChzcGVlY2hTZXJ2aWNlICE9IG51bGwpIHJldHVybgoKICAgICAgICB0cnkgewogICAgICAgICAgICB2YWwgcmVjb2duaXplciA9IG9yZy52b3NrLlJlY29nbml6ZXIobW9kZWwsIDE2MDAwLjBmKQogICAgICAgICAgICB2YWwgc2VydmljZSA9IG9yZy52b3NrLmFuZHJvaWQuU3BlZWNoU2VydmljZShyZWNvZ25pemVyLCAxNjAwMC4wZikKICAgICAgICAgICAgc3BlZWNoU2VydmljZSA9IHNlcnZpY2UKICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiU2VzbGkga29tdXQ6IHPDvHJla2xpIGRpbmxpeW9yIgogICAgICAgICAgICBzZXJ2aWNlLnN0YXJ0TGlzdGVuaW5nKG9iamVjdCA6IG9yZy52b3NrLmFuZHJvaWQuUmVjb2duaXRpb25MaXN0ZW5lciB7CiAgICAgICAgICAgICAgICBvdmVycmlkZSBmdW4gb25QYXJ0aWFsUmVzdWx0KGh5cG90aGVzaXM6IFN0cmluZz8pIHsKICAgICAgICAgICAgICAgICAgICBoYW5kbGVWb3NrUmVzdWx0KGh5cG90aGVzaXMpCiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgb3ZlcnJpZGUgZnVuIG9uUmVzdWx0KGh5cG90aGVzaXM6IFN0cmluZz8pIHsKICAgICAgICAgICAgICAgICAgICBoYW5kbGVWb3NrUmVzdWx0KGh5cG90aGVzaXMpCiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgb3ZlcnJpZGUgZnVuIG9uRmluYWxSZXN1bHQoaHlwb3RoZXNpczogU3RyaW5nPykgewogICAgICAgICAgICAgICAgICAgIGhhbmRsZVZvc2tSZXN1bHQoaHlwb3RoZXNpcykKICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICBvdmVycmlkZSBmdW4gb25FcnJvcihleGNlcHRpb246IEV4Y2VwdGlvbj8pIHsKICAgICAgICAgICAgICAgICAgICBzcGVlY2hTZXJ2aWNlID0gbnVsbAogICAgICAgICAgICAgICAgICAgIGJpbmRpbmcudHZWb2ljZS50ZXh0ID0gIlNlc2xpIGtvbXV0IHllbmlkZW4gYmHFn2xhdMSxbMSxeW9yIgogICAgICAgICAgICAgICAgICAgIGlmICh2b2ljZVdhbnRlZCAmJiBiaW5kaW5nLnN3aXRjaFZvaWNlLmlzQ2hlY2tlZCkgewogICAgICAgICAgICAgICAgICAgICAgICBiaW5kaW5nLnJvb3QucG9zdERlbGF5ZWQoeyBzdGFydFZvc2tMaXN0ZW5pbmcoKSB9LCA4MDApCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIG92ZXJyaWRlIGZ1biBvblRpbWVvdXQoKSB7CiAgICAgICAgICAgICAgICAgICAgc3BlZWNoU2VydmljZSA9IG51bGwKICAgICAgICAgICAgICAgICAgICBpZiAodm9pY2VXYW50ZWQgJiYgYmluZGluZy5zd2l0Y2hWb2ljZS5pc0NoZWNrZWQpIHsKICAgICAgICAgICAgICAgICAgICAgICAgYmluZGluZy5yb290LnBvc3REZWxheWVkKHsgc3RhcnRWb3NrTGlzdGVuaW5nKCkgfSwgMjAwKQogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSkKICAgICAgICB9IGNhdGNoIChlOiBFeGNlcHRpb24pIHsKICAgICAgICAgICAgc3BlZWNoU2VydmljZSA9IG51bGwKICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiU2VzbGkga29tdXQgYmHFn2xhdMSxbGFtYWTEsSIKICAgICAgICAgICAgdG9hc3QoIlNlc2xpIGtvbXV0IGhhdGFzxLE6ICR7ZS5tZXNzYWdlID86ICJiaWxpbm1leWVuIGhhdGEifSIpCiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVuIGhhbmRsZVZvc2tSZXN1bHQoanNvbjogU3RyaW5nPykgewogICAgICAgIGlmIChqc29uLmlzTnVsbE9yQmxhbmsoKSkgcmV0dXJuCiAgICAgICAgdmFsIHNwb2tlbiA9IHRyeSB7CiAgICAgICAgICAgIHZhbCBvYmogPSBvcmcuanNvbi5KU09OT2JqZWN0KGpzb24pCiAgICAgICAgICAgIHZhbCBwYXJ0aWFsID0gb2JqLm9wdFN0cmluZygicGFydGlhbCIsICIiKQogICAgICAgICAgICBpZiAocGFydGlhbC5pc05vdEJsYW5rKCkpIHBhcnRpYWwgZWxzZSBvYmoub3B0U3RyaW5nKCJ0ZXh0IiwgIiIpCiAgICAgICAgfSBjYXRjaCAoXzogRXhjZXB0aW9uKSB7CiAgICAgICAgICAgICIiCiAgICAgICAgfQogICAgICAgIGlmIChzcG9rZW4uaXNCbGFuaygpKSByZXR1cm4KCiAgICAgICAgdmFsIG5vcm1hbGl6ZWQgPSBzcG9rZW4ubG93ZXJjYXNlKExvY2FsZSgidHIiLCAiVFIiKSkKICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJEdXl1bGR1OiAkc3Bva2VuIgoKICAgICAgICB2YWwgbm93ID0gU3lzdGVtLmN1cnJlbnRUaW1lTWlsbGlzKCkKICAgICAgICBpZiAobm93IC0gbGFzdFZvaWNlQ29tbWFuZE1zIDwgMTIwMEwpIHJldHVybgoKICAgICAgICB3aGVuIHsKICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygiYmHFn2xhIikgfHwKICAgICAgICAgICAgICAgIG5vcm1hbGl6ZWQuY29udGFpbnMoImJhc2xhIikgfHwKICAgICAgICAgICAgICAgIG5vcm1hbGl6ZWQuY29udGFpbnMoImthecSxdCBiYcWfbGEiKSB8fAogICAgICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygia2F5aXQgYmFzbGEiKSAtPiB7CiAgICAgICAgICAgICAgICBpZiAoYWN0aXZlUmVjb3JkaW5nID09IG51bGwpIHsKICAgICAgICAgICAgICAgICAgICBsYXN0Vm9pY2VDb21tYW5kTXMgPSBub3cKICAgICAgICAgICAgICAgICAgICBzdGFydFJlY29yZGluZygpCiAgICAgICAgICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiS29tdXQgYWzEsW5kxLE6IEJBxZ5MQSIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQoKICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygiZHVyIikgfHwKICAgICAgICAgICAgICAgIG5vcm1hbGl6ZWQuY29udGFpbnMoImtheWTEsSBkdXJkdXIiKSB8fAogICAgICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygia2F5ZGkgZHVyZHVyIikgLT4gewogICAgICAgICAgICAgICAgaWYgKGFjdGl2ZVJlY29yZGluZyAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICAgICAgbGFzdFZvaWNlQ29tbWFuZE1zID0gbm93CiAgICAgICAgICAgICAgICAgICAgc3RvcFJlY29yZGluZygpCiAgICAgICAgICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiS29tdXQgYWzEsW5kxLE6IERVUiIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIGZ1biBzdG9wVm9pY2VDb250cm9sKCkgewogICAgICAgIHRyeSB7IHNwZWVjaFNlcnZpY2U/LnN0b3AoKSB9IGNhdGNoIChfOiBFeGNlcHRpb24pIHt9CiAgICAgICAgdHJ5IHsgc3BlZWNoU2VydmljZT8uc2h1dGRvd24oKSB9IGNhdGNoIChfOiBFeGNlcHRpb24pIHt9CiAgICAgICAgc3BlZWNoU2VydmljZSA9IG51bGwKICAgIH0KCg=='
+          replacement = base64.b64decode(replacement_b64).decode('utf-8')
           text = text[:start] + replacement + text[end:]
 
           text = text.replace(
               '        speechRecognizer?.destroy()\n        speechRecognizer = null\n',
               '        stopVoiceControl()\n        try { voskModel?.close() } catch (_: Exception) {}\n        voskModel = null\n'
           )
-
           kt.write_text(text, encoding='utf-8')
 
           gradle = Path('motocam/app/build.gradle.kts')
@@ -222,11 +98,9 @@ jobs:
 
           manifest = Path('motocam/app/src/main/AndroidManifest.xml')
           m = manifest.read_text(encoding='utf-8')
-          # v1.5 zil/titresim/sistem ses ayarlarini degistirmez; eski ek izin varsa kaldir.
           m = m.replace('    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n', '')
           manifest.write_text(m, encoding='utf-8')
-
-          print('MotoCam v1.5: SpeechRecognizer kaldirildi, Vosk surekli dinleme eklendi.')
+          print('MotoCam v1.5 Vosk surekli dinleme uygulandi.')
           PY
 
       - name: Gradle 8.9 kur
