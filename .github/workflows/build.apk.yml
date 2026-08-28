@@ -47,7 +47,7 @@ jobs:
       - name: MotoCam temel sesli komut degisikliklerini uygula
         run: python3 .github/scripts/v15_patch.py
 
-      - name: MotoCam v2.3 SERKAN durdurma sesini uygula
+      - name: MotoCam v2.4 ses iyilestirmelerini uygula
         run: python3 .github/scripts/v20_fix.py
 
       - name: Gradle 8.9 kur
@@ -55,13 +55,13 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: MotoCam v2.3 APK derle
+      - name: MotoCam v2.4 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
 
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v2.3-APK
+          name: MotoCam-v2.4-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
