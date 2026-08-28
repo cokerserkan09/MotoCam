@@ -34,9 +34,45 @@ jobs:
           mkdir motocam
           unzip -q MotoCam_1.0_Full_Android.zip -d motocam
 
-      - name: Sesli komut kodunu incele
+      - name: Sesli komut bip dongusunu duzelt
         run: |
-          sed -n '300,430p' motocam/app/src/main/java/com/motocam/app/MainActivity.kt
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("motocam/app/src/main/java/com/motocam/app/MainActivity.kt")
+          text = path.read_text(encoding="utf-8")
+
+          changes = [
+              (
+                  '                    restartVoiceSoon()\n',
+                  '                    restartVoiceSoon(1500)\n'
+              ),
+              (
+                  '                    if (voiceWanted) restartVoiceSoon(650)\n',
+                  '                    if (voiceWanted) restartVoiceSoon(1800)\n'
+              ),
+              (
+                  '            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)\n',
+                  ''
+              ),
+              (
+                  '            speechRecognizer?.cancel()\n            speechRecognizer?.startListening(intent)\n',
+                  '            speechRecognizer?.startListening(intent)\n'
+              ),
+              (
+                  '    private fun restartVoiceSoon(delayMs: Long = 400L) {\n',
+                  '    private fun restartVoiceSoon(delayMs: Long = 1500L) {\n'
+              ),
+          ]
+
+          for old, new in changes:
+              if old not in text:
+                  raise SystemExit(f"Beklenen kod bulunamadi: {old!r}")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          print("MotoCam v1.1 sesli komut duzeltmesi uygulandi.")
+          PY
 
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
@@ -50,6 +86,6 @@ jobs:
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-APK
+          name: MotoCam-v1.1-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
