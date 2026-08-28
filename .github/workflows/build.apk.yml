@@ -41,67 +41,11 @@ jobs:
           mkdir -p /tmp/vosk-tr motocam/app/src/main/assets/model-tr
           unzip -q /tmp/vosk-tr.zip -d /tmp/vosk-tr
           cp -R /tmp/vosk-tr/vosk-model-small-tr-0.3/. motocam/app/src/main/assets/model-tr/
-          test -f motocam/app/src/main/assets/model-tr/conf/model.conf
+          test -d motocam/app/src/main/assets/model-tr/conf
+          printf 'motocam-vosk-tr-0.3-v1\n' > motocam/app/src/main/assets/model-tr/uuid
 
       - name: Vosk surekli sesli komutu uygula
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import base64
-
-          kt = Path("motocam/app/src/main/java/com/motocam/app/MainActivity.kt")
-          text = kt.read_text(encoding="utf-8")
-
-          for line in [
-              'import android.speech.RecognitionListener\n',
-              'import android.speech.RecognizerIntent\n',
-              'import android.speech.SpeechRecognizer\n',
-          ]:
-              text = text.replace(line, '')
-
-          text = text.replace(
-              '    private var speechRecognizer: SpeechRecognizer? = null\n    private var voiceWanted = true\n',
-              '    private var voskModel: org.vosk.Model? = null\n'
-              '    private var speechService: org.vosk.android.SpeechService? = null\n'
-              '    private var voiceInitStarted = false\n'
-              '    private var lastVoiceCommandMs = 0L\n'
-              '    private var voiceWanted = true\n'
-          )
-
-          start = text.find('    private fun startVoiceControl() {')
-          end = text.find('    private fun tryRouteBluetoothMic() {', start)
-          if start == -1 or end == -1:
-              raise SystemExit('Sesli komut blogu bulunamadi')
-
-          replacement_b64 = 'ICAgIHByaXZhdGUgZnVuIHN0YXJ0Vm9pY2VDb250cm9sKCkgewogICAgICAgIGlmICghdm9pY2VXYW50ZWQgfHwgIWhhc01pY1Blcm1pc3Npb24oKSkgcmV0dXJuCgogICAgICAgIHRyeVJvdXRlQmx1ZXRvb3RoTWljKCkKCiAgICAgICAgaWYgKHNwZWVjaFNlcnZpY2UgIT0gbnVsbCkgewogICAgICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJTZXNsaSBrb211dDogc8O8cmVrbGkgZGlubGl5b3IiCiAgICAgICAgICAgIHJldHVybgogICAgICAgIH0KICAgICAgICBpZiAodm9pY2VJbml0U3RhcnRlZCkgcmV0dXJuCiAgICAgICAgdm9pY2VJbml0U3RhcnRlZCA9IHRydWUKICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJTZXNsaSBrb211dCBtb2RlbGkgaGF6xLFybGFuxLF5b3IuLi4iCgogICAgICAgIG9yZy52b3NrLmFuZHJvaWQuU3RvcmFnZVNlcnZpY2UudW5wYWNrKAogICAgICAgICAgICB0aGlzLAogICAgICAgICAgICAibW9kZWwtdHIiLAogICAgICAgICAgICAibW9kZWwtdHIiLAogICAgICAgICAgICB7IG1vZGVsIC0+CiAgICAgICAgICAgICAgICB2b2ljZUluaXRTdGFydGVkID0gZmFsc2UKICAgICAgICAgICAgICAgIHZvc2tNb2RlbCA9IG1vZGVsCiAgICAgICAgICAgICAgICBpZiAodm9pY2VXYW50ZWQgJiYgYmluZGluZy5zd2l0Y2hWb2ljZS5pc0NoZWNrZWQpIHsKICAgICAgICAgICAgICAgICAgICBzdGFydFZvc2tMaXN0ZW5pbmcoKQogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9LAogICAgICAgICAgICB7IGV4Y2VwdGlvbiAtPgogICAgICAgICAgICAgICAgdm9pY2VJbml0U3RhcnRlZCA9IGZhbHNlCiAgICAgICAgICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJTZXNsaSBrb211dCBtb2RlbGkgYcOnxLFsYW1hZMSxIgogICAgICAgICAgICAgICAgdG9hc3QoIlNlc2xpIGtvbXV0IGhhdGFzxLE6ICR7ZXhjZXB0aW9uLm1lc3NhZ2UgPzogImJpbGlubWV5ZW4gaGF0YSJ9IikKICAgICAgICAgICAgfQogICAgICAgICkKICAgIH0KCiAgICBwcml2YXRlIGZ1biBzdGFydFZvc2tMaXN0ZW5pbmcoKSB7CiAgICAgICAgaWYgKCF2b2ljZVdhbnRlZCB8fCAhYmluZGluZy5zd2l0Y2hWb2ljZS5pc0NoZWNrZWQgfHwgIWhhc01pY1Blcm1pc3Npb24oKSkgcmV0dXJuCiAgICAgICAgdmFsIG1vZGVsID0gdm9za01vZGVsID86IHJldHVybgogICAgICAgIGlmIChzcGVlY2hTZXJ2aWNlICE9IG51bGwpIHJldHVybgoKICAgICAgICB0cnkgewogICAgICAgICAgICB2YWwgcmVjb2duaXplciA9IG9yZy52b3NrLlJlY29nbml6ZXIobW9kZWwsIDE2MDAwLjBmKQogICAgICAgICAgICB2YWwgc2VydmljZSA9IG9yZy52b3NrLmFuZHJvaWQuU3BlZWNoU2VydmljZShyZWNvZ25pemVyLCAxNjAwMC4wZikKICAgICAgICAgICAgc3BlZWNoU2VydmljZSA9IHNlcnZpY2UKICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiU2VzbGkga29tdXQ6IHPDvHJla2xpIGRpbmxpeW9yIgogICAgICAgICAgICBzZXJ2aWNlLnN0YXJ0TGlzdGVuaW5nKG9iamVjdCA6IG9yZy52b3NrLmFuZHJvaWQuUmVjb2duaXRpb25MaXN0ZW5lciB7CiAgICAgICAgICAgICAgICBvdmVycmlkZSBmdW4gb25QYXJ0aWFsUmVzdWx0KGh5cG90aGVzaXM6IFN0cmluZz8pIHsKICAgICAgICAgICAgICAgICAgICBoYW5kbGVWb3NrUmVzdWx0KGh5cG90aGVzaXMpCiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgb3ZlcnJpZGUgZnVuIG9uUmVzdWx0KGh5cG90aGVzaXM6IFN0cmluZz8pIHsKICAgICAgICAgICAgICAgICAgICBoYW5kbGVWb3NrUmVzdWx0KGh5cG90aGVzaXMpCiAgICAgICAgICAgICAgICB9CgogICAgICAgICAgICAgICAgb3ZlcnJpZGUgZnVuIG9uRmluYWxSZXN1bHQoaHlwb3RoZXNpczogU3RyaW5nPykgewogICAgICAgICAgICAgICAgICAgIGhhbmRsZVZvc2tSZXN1bHQoaHlwb3RoZXNpcykKICAgICAgICAgICAgICAgIH0KCiAgICAgICAgICAgICAgICBvdmVycmlkZSBmdW4gb25FcnJvcihleGNlcHRpb246IEV4Y2VwdGlvbj8pIHsKICAgICAgICAgICAgICAgICAgICBzcGVlY2hTZXJ2aWNlID0gbnVsbAogICAgICAgICAgICAgICAgICAgIGJpbmRpbmcudHZWb2ljZS50ZXh0ID0gIlNlc2xpIGtvbXV0IHllbmlkZW4gYmHFn2xhdMSxbMSxeW9yIgogICAgICAgICAgICAgICAgICAgIGlmICh2b2ljZVdhbnRlZCAmJiBiaW5kaW5nLnN3aXRjaFZvaWNlLmlzQ2hlY2tlZCkgewogICAgICAgICAgICAgICAgICAgICAgICBiaW5kaW5nLnJvb3QucG9zdERlbGF5ZWQoeyBzdGFydFZvc2tMaXN0ZW5pbmcoKSB9LCA4MDApCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfQoKICAgICAgICAgICAgICAgIG92ZXJyaWRlIGZ1biBvblRpbWVvdXQoKSB7CiAgICAgICAgICAgICAgICAgICAgc3BlZWNoU2VydmljZSA9IG51bGwKICAgICAgICAgICAgICAgICAgICBpZiAodm9pY2VXYW50ZWQgJiYgYmluZGluZy5zd2l0Y2hWb2ljZS5pc0NoZWNrZWQpIHsKICAgICAgICAgICAgICAgICAgICAgICAgYmluZGluZy5yb290LnBvc3REZWxheWVkKHsgc3RhcnRWb3NrTGlzdGVuaW5nKCkgfSwgMjAwKQogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSkKICAgICAgICB9IGNhdGNoIChlOiBFeGNlcHRpb24pIHsKICAgICAgICAgICAgc3BlZWNoU2VydmljZSA9IG51bGwKICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiU2VzbGkga29tdXQgYmHFn2xhdMSxbGFtYWTEsSIKICAgICAgICAgICAgdG9hc3QoIlNlc2xpIGtvbXV0IGhhdGFzxLE6ICR7ZS5tZXNzYWdlID86ICJiaWxpbm1leWVuIGhhdGEifSIpCiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVuIGhhbmRsZVZvc2tSZXN1bHQoanNvbjogU3RyaW5nPykgewogICAgICAgIGlmIChqc29uLmlzTnVsbE9yQmxhbmsoKSkgcmV0dXJuCiAgICAgICAgdmFsIHNwb2tlbiA9IHRyeSB7CiAgICAgICAgICAgIHZhbCBvYmogPSBvcmcuanNvbi5KU09OT2JqZWN0KGpzb24pCiAgICAgICAgICAgIHZhbCBwYXJ0aWFsID0gb2JqLm9wdFN0cmluZygicGFydGlhbCIsICIiKQogICAgICAgICAgICBpZiAocGFydGlhbC5pc05vdEJsYW5rKCkpIHBhcnRpYWwgZWxzZSBvYmoub3B0U3RyaW5nKCJ0ZXh0IiwgIiIpCiAgICAgICAgfSBjYXRjaCAoXzogRXhjZXB0aW9uKSB7CiAgICAgICAgICAgICIiCiAgICAgICAgfQogICAgICAgIGlmIChzcG9rZW4uaXNCbGFuaygpKSByZXR1cm4KCiAgICAgICAgdmFsIG5vcm1hbGl6ZWQgPSBzcG9rZW4ubG93ZXJjYXNlKExvY2FsZSgidHIiLCAiVFIiKSkKICAgICAgICBiaW5kaW5nLnR2Vm9pY2UudGV4dCA9ICJEdXl1bGR1OiAkc3Bva2VuIgoKICAgICAgICB2YWwgbm93ID0gU3lzdGVtLmN1cnJlbnRUaW1lTWlsbGlzKCkKICAgICAgICBpZiAobm93IC0gbGFzdFZvaWNlQ29tbWFuZE1zIDwgMTIwMEwpIHJldHVybgoKICAgICAgICB3aGVuIHsKICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygiYmHFn2xhIikgfHwKICAgICAgICAgICAgICAgIG5vcm1hbGl6ZWQuY29udGFpbnMoImJhc2xhIikgfHwKICAgICAgICAgICAgICAgIG5vcm1hbGl6ZWQuY29udGFpbnMoImthecSxdCBiYcWfbGEiKSB8fAogICAgICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygia2F5aXQgYmFzbGEiKSAtPiB7CiAgICAgICAgICAgICAgICBpZiAoYWN0aXZlUmVjb3JkaW5nID09IG51bGwpIHsKICAgICAgICAgICAgICAgICAgICBsYXN0Vm9pY2VDb21tYW5kTXMgPSBub3cKICAgICAgICAgICAgICAgICAgICBzdGFydFJlY29yZGluZygpCiAgICAgICAgICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiS29tdXQgYWzEsW5kxLE6IEJBxZ5MQSIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQoKICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygiZHVyIikgfHwKICAgICAgICAgICAgICAgIG5vcm1hbGl6ZWQuY29udGFpbnMoImtheWTEsSBkdXJkdXIiKSB8fAogICAgICAgICAgICAgICAgbm9ybWFsaXplZC5jb250YWlucygia2F5ZGkgZHVyZHVyIikgLT4gewogICAgICAgICAgICAgICAgaWYgKGFjdGl2ZVJlY29yZGluZyAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICAgICAgbGFzdFZvaWNlQ29tbWFuZE1zID0gbm93CiAgICAgICAgICAgICAgICAgICAgc3RvcFJlY29yZGluZygpCiAgICAgICAgICAgICAgICAgICAgYmluZGluZy50dlZvaWNlLnRleHQgPSAiS29tdXQgYWzEsW5kxLE6IERVUiIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIGZ1biBzdG9wVm9pY2VDb250cm9sKCkgewogICAgICAgIHRyeSB7IHNwZWVjaFNlcnZpY2U/LnN0b3AoKSB9IGNhdGNoIChfOiBFeGNlcHRpb24pIHt9CiAgICAgICAgdHJ5IHsgc3BlZWNoU2VydmljZT8uc2h1dGRvd24oKSB9IGNhdGNoIChfOiBFeGNlcHRpb24pIHt9CiAgICAgICAgc3BlZWNoU2VydmljZSA9IG51bGwKICAgIH0KCg=='
-          replacement = base64.b64decode(replacement_b64).decode('utf-8')
-          text = text[:start] + replacement + text[end:]
-
-          text = text.replace(
-              '        speechRecognizer?.destroy()\n        speechRecognizer = null\n',
-              '        stopVoiceControl()\n        try { voskModel?.close() } catch (_: Exception) {}\n        voskModel = null\n'
-          )
-          kt.write_text(text, encoding='utf-8')
-
-          gradle = Path('motocam/app/build.gradle.kts')
-          g = gradle.read_text(encoding='utf-8')
-          if 'com.alphacephei:vosk-android' not in g:
-              g = g.replace(
-                  'dependencies {\n',
-                  'dependencies {\n'
-                  '    implementation("net.java.dev.jna:jna:5.13.0@aar")\n'
-                  '    implementation("com.alphacephei:vosk-android:0.3.47@aar")\n'
-              )
-          g = g.replace('versionCode = 2', 'versionCode = 5')
-          g = g.replace('versionName = "1.0.0"', 'versionName = "1.5.0"')
-          gradle.write_text(g, encoding='utf-8')
-
-          manifest = Path('motocam/app/src/main/AndroidManifest.xml')
-          m = manifest.read_text(encoding='utf-8')
-          m = m.replace('    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n', '')
-          manifest.write_text(m, encoding='utf-8')
-          print('MotoCam v1.5 Vosk surekli dinleme uygulandi.')
-          PY
+        run: python3 .github/scripts/v15_patch.py
 
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
