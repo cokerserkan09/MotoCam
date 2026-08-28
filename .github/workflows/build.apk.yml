@@ -50,6 +50,11 @@ jobs:
       - name: MotoCam v2.4 ses iyilestirmelerini uygula
         run: python3 .github/scripts/v20_fix.py
 
+      - name: Kayit kodunu tani
+        run: |
+          grep -n -A90 -B20 "private fun startRecording" motocam/app/src/main/java/com/motocam/app/MainActivity.kt || true
+          grep -n -A90 -B20 "private fun onRecordingFinalized" motocam/app/src/main/java/com/motocam/app/MainActivity.kt || true
+
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
