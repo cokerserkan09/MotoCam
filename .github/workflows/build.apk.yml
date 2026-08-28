@@ -9,31 +9,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Depoyu al
         uses: actions/checkout@v4
-
       - name: Java 17 kur
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
       - name: Android SDK hazirla
         uses: android-actions/setup-android@v3
-
       - name: Android 35 paketlerini kur
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
-
       - name: MotoCam ZIP dosyasini ac
         run: |
           rm -rf motocam
           mkdir motocam
           unzip -q MotoCam_1.0_Full_Android.zip -d motocam
-
       - name: Vosk Turkce modelini ekle
         run: |
           curl -L --fail --retry 3 -o /tmp/vosk-tr.zip https://alphacephei.com/vosk/models/vosk-model-small-tr-0.3.zip
@@ -43,30 +37,22 @@ jobs:
           cp -R /tmp/vosk-tr/vosk-model-small-tr-0.3/. motocam/app/src/main/assets/model-tr/
           test -n "$(find motocam/app/src/main/assets/model-tr -mindepth 1 -print -quit)"
           printf 'motocam-vosk-tr-0.3-v1\n' > motocam/app/src/main/assets/model-tr/uuid
-
-      - name: MotoCam temel sesli komut degisikliklerini uygula
+      - name: Temel sesli komut degisikliklerini uygula
         run: python3 .github/scripts/v15_patch.py
-
-      - name: MotoCam v2.4 ses iyilestirmelerini uygula
+      - name: v2.4 ses degisikliklerini uygula
         run: python3 .github/scripts/v20_fix.py
-
-      - name: Kayit kodunu tani
-        run: |
-          grep -n -A90 -B20 "private fun startRecording" motocam/app/src/main/java/com/motocam/app/MainActivity.kt || true
-          grep -n -A90 -B20 "private fun onRecordingFinalized" motocam/app/src/main/java/com/motocam/app/MainActivity.kt || true
-
+      - name: v2.5 yeniliklerini uygula
+        run: python3 .github/scripts/v25_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-
-      - name: MotoCam v2.4 APK derle
+      - name: MotoCam v2.5 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
-
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v2.4-APK
+          name: MotoCam-v2.5-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
