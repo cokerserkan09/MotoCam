@@ -45,16 +45,18 @@ jobs:
         run: python3 .github/scripts/v25_patch.py
       - name: v2.6 interkom mikrofon duzeltmesini uygula
         run: python3 .github/scripts/v26_intercom_patch.py
+      - name: v2.7 mikrofon secimini uygula
+        run: python3 .github/scripts/v27_mic_selector_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: MotoCam v2.6 APK derle
+      - name: MotoCam v2.7 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v2.6-APK
+          name: MotoCam-v2.7-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
