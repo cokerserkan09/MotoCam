@@ -51,16 +51,18 @@ jobs:
         run: python3 .github/scripts/v28_noise_patch.py
       - name: v2.9 dogrudan interkom ses girisini uygula
         run: python3 .github/scripts/v29_direct_audio_patch.py
+      - name: v3.0 SCO baglantisini bekle
+        run: python3 .github/scripts/v30_sco_wait_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: MotoCam v2.9 APK derle
+      - name: MotoCam v3.0 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v2.9-APK
+          name: MotoCam-v3.0-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
