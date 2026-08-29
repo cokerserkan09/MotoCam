@@ -15,7 +15,7 @@ helper='''    private fun handleLiveVoskPartial(hypothesis: String?) {
             val partial = normalizeCommand(obj.optString("partial", ""))
             if (partial.isBlank()) return
             val clean = partial.replace(Regex("[^a-zçğıöşü ]"), " ").trim()
-            val words = clean.split(Regex("\\s+")).filter { it.isNotBlank() }
+            val words = clean.split(Regex("\\\\s+")).filter { it.isNotBlank() }
             val startWord = startCommand()
             val stopWord = stopCommand()
             val last = words.lastOrNull() ?: return
