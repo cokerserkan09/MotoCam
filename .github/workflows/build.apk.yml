@@ -73,16 +73,18 @@ jobs:
         run: python3 .github/scripts/v39_self_fix.py
       - name: v3.9 gercek medya sesi yakalamayi uygula
         run: python3 .github/scripts/v39_real_playback_capture_patch.py
+      - name: v4.0 medya crash guard ve hazirlik kontrolunu uygula
+        run: python3 .github/scripts/v40_media_crash_guard_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: MotoCam v3.9 APK derle
+      - name: MotoCam v4.0 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v3.9-APK
+          name: MotoCam-v4.0-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
