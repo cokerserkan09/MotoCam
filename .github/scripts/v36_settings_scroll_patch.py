@@ -10,37 +10,31 @@ if start < 0 or end < 0:
     raise SystemExit('settings block bulunamadi')
 b = s[start:end]
 
-# Dialog content is already a ScrollView in v3.3+. The problem is the positive
-# button lives below the oversized dialog content on short screens. Constrain
-# the scroll area to the visible screen and keep the dialog buttons reachable.
-needle = '        val scroll = android.widget.ScrollView(this)\n'
-if needle not in b:
-    raise SystemExit('ScrollView anchor bulunamadi')
+# v3.3 ScrollView'i dogrudan setView(...) icinde olusturuyor. Onu isimli bir
+# ScrollView'e cevirip yuksekligini ekranin bir kismina sinirliyoruz. Boylece
+# icerik kayar, AlertDialog'un KAYDET / IPTAL dugmeleri ekran disina cikmaz.
+inline_scroll = '.setView(android.widget.ScrollView(this).apply { addView(box) })'
+if inline_scroll not in b:
+    raise SystemExit('v3.3 inline ScrollView bulunamadi')
 
-# Give the ScrollView a strict max-height by wrapping its child in a layout and
-# applying a screen-relative height before showing the AlertDialog.
-show_anchor = '            .setView(scroll)\n'
-if show_anchor not in b:
-    raise SystemExit('setView(scroll) anchor bulunamadi')
+builder_anchor = '        androidx.appcompat.app.AlertDialog.Builder(this)\n'
+if builder_anchor not in b:
+    raise SystemExit('AlertDialog Builder bulunamadi')
 
-# Replace plain show() with a dialog variable so window/content can be resized.
-old_show = '            .show()\n'
-if old_show not in b:
-    raise SystemExit('dialog show anchor bulunamadi')
-new_show = '''            .create()
-        dialog.setOnShowListener {
-            val maxHeight = (resources.displayMetrics.heightPixels * 0.82f).toInt()
-            scroll.layoutParams = android.widget.FrameLayout.LayoutParams(
+scroll_decl = '''        val settingsScroll = android.widget.ScrollView(this).apply {
+            addView(box)
+            isFillViewport = false
+            overScrollMode = android.view.View.OVER_SCROLL_ALWAYS
+            layoutParams = android.view.ViewGroup.LayoutParams(
                 android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                maxHeight
+                (resources.displayMetrics.heightPixels * 0.55f).toInt()
             )
-            scroll.isFillViewport = false
-            scroll.overScrollMode = android.view.View.OVER_SCROLL_ALWAYS
-            dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
-        dialog.show()
+        androidx.appcompat.app.AlertDialog.Builder(this)
 '''
-b = b.replace(old_show, new_show, 1)
+
+b = b.replace(builder_anchor, scroll_decl, 1)
+b = b.replace(inline_scroll, '.setView(settingsScroll)', 1)
 s = s[:start] + b + s[end:]
 
 kt.write_text(s, encoding='utf-8')
@@ -50,4 +44,5 @@ g = gradle.read_text(encoding='utf-8')
 g = re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 27', g, count=1)
 g = re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "3.6.0"', g, count=1)
 gradle.write_text(g, encoding='utf-8')
-print('MotoCam v3.6: ayarlar kaydirma alani sinirlandi, Kaydet/Iptal butonlari ekranda')
+
+print('MotoCam v3.6: ayarlar kaydirilabilir, KAYDET ve IPTAL dugmeleri gorunur')
