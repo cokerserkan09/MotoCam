@@ -47,8 +47,6 @@ helpers = r'''    private fun reportMotoCamLogicIssue(message: String) {
                 return@runOnUiThread
             }
 
-            // CameraX stop isteği normalde hızlıca finalize olur. Olmazsa aynı Recording
-            // nesnesine doğrudan stop göndererek bir kez güvenli fallback yap.
             binding.root.postDelayed({
                 if (activeRecording === before) {
                     try {
@@ -72,12 +70,11 @@ helpers = r'''    private fun reportMotoCamLogicIssue(message: String) {
 if 'private fun requestVoiceStop(' not in s:
     s = s.replace(anchor, helpers + anchor, 1)
 
-# Fix the whitespace splitter in the live partial path. The old generated regex could
-# treat a multi-word partial as one token.
+# Generated Kotlin must contain Regex("\\s+"). Use a raw Python replacement so the
+# Kotlin compiler receives a valid escaped backslash, not Regex("\s+").
 s = s.replace('val words = clean.split(Regex("\\\\s+")).filter { it.isNotBlank() }',
-              'val words = clean.split(Regex("\\s+")).filter { it.isNotBlank() }', 1)
+              r'val words = clean.split(Regex("\\s+")).filter { it.isNotBlank() }', 1)
 
-# Live partial stop: route through one verified stop function.
 old_partial = '''                last == stopWord -> {
                     lastVoiceCommandMs = now
                     runOnUiThread {
@@ -97,8 +94,6 @@ if old_partial not in s:
     raise SystemExit('partial stop blogu bulunamadi')
 s = s.replace(old_partial, new_partial, 1)
 
-# Final/full Vosk result stop: do not silently ignore a recognized stop word just
-# because app state says activeRecording is null; surface the mismatch instead.
 old_final = '''            stopDetected && activeRecording != null -> { lastVoiceCommandMs = now; voiceStopRequested = true; runOnUiThread { binding.tvVoice.text = "Komut alındı: ${stopWord.uppercase()}"; stopRecording() } }
 '''
 new_final = '''            stopDetected -> { lastVoiceCommandMs = now; requestVoiceStop("Vosk final") }
@@ -107,8 +102,6 @@ if old_final not in s:
     raise SystemExit('final stop blogu bulunamadi')
 s = s.replace(old_final, new_final, 1)
 
-# Keep crash diagnostics permanent, and also persist recognizer exceptions/timeouts
-# that do not crash the process.
 s = s.replace('''                override fun onError(exception: Exception?) {
                     speechService = null
                     binding.tvVoice.text = "Sesli komut yeniden başlatılıyor"
