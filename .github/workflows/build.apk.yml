@@ -69,6 +69,8 @@ jobs:
         run: python3 .github/scripts/v37_permissions_settings_patch.py
       - name: v3.8 kompakt ayarlar ekranini uygula
         run: python3 .github/scripts/v38_compact_settings_patch.py
+      - name: v3.9 anchor duzeltmesini uygula
+        run: python3 .github/scripts/v39_self_fix.py
       - name: v3.9 gercek medya sesi yakalamayi uygula
         run: python3 .github/scripts/v39_real_playback_capture_patch.py
       - name: Gradle 8.9 kur
