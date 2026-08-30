@@ -37,58 +37,39 @@ jobs:
           cp -R /tmp/vosk-tr/vosk-model-small-tr-0.3/. motocam/app/src/main/assets/model-tr/
           test -n "$(find motocam/app/src/main/assets/model-tr -mindepth 1 -print -quit)"
           printf 'motocam-vosk-tr-0.3-v1\n' > motocam/app/src/main/assets/model-tr/uuid
-      - name: Temel sesli komut degisikliklerini uygula
-        run: python3 .github/scripts/v15_patch.py
-      - name: v2.4 ses degisikliklerini uygula
-        run: python3 .github/scripts/v20_fix.py
-      - name: v2.5 yeniliklerini uygula
-        run: python3 .github/scripts/v25_patch.py
-      - name: v2.6 interkom mikrofon duzeltmesini uygula
-        run: python3 .github/scripts/v26_intercom_patch.py
-      - name: v2.7 mikrofon secimini uygula
-        run: python3 .github/scripts/v27_mic_selector_patch.py
-      - name: v2.8 seyir gurultusu filtresini uygula
-        run: python3 .github/scripts/v28_noise_patch.py
-      - name: v2.9 dogrudan interkom ses girisini uygula
-        run: python3 .github/scripts/v29_direct_audio_patch.py
-      - name: v3.0 SCO baglantisini bekle
-        run: python3 .github/scripts/v30_sco_wait_patch.py
-      - name: v3.1 seyir halinde canli komut algilamayi uygula
-        run: python3 .github/scripts/v31_live_command_patch.py
-      - name: v3.2 dort kontrol secenegini uygula
-        run: python3 .github/scripts/v32_control_selector_patch.py
-      - name: v3.3 otomatik parcali kaydi uygula
-        run: python3 .github/scripts/v33_segment_recording_patch.py
-      - name: v3.4 video ses kaynagini uygula
-        run: python3 .github/scripts/v34_audio_source_patch.py
-      - name: v3.5 telefon aramasinda kaydi beklet
-        run: python3 .github/scripts/v35_phone_call_pause_patch.py
-      - name: v3.6 ayarlar kaydirma ve Kaydet butonunu duzelt
-        run: python3 .github/scripts/v36_settings_scroll_patch.py
-      - name: v3.7 izin ve ayarlar duzeltmesini uygula
-        run: python3 .github/scripts/v37_permissions_settings_patch.py
-      - name: v3.8 kompakt ayarlar ekranini uygula
-        run: python3 .github/scripts/v38_compact_settings_patch.py
-      - name: v3.9 anchor duzeltmesini uygula
-        run: python3 .github/scripts/v39_self_fix.py
-      - name: v3.9 gercek medya sesi yakalamayi uygula
-        run: python3 .github/scripts/v39_real_playback_capture_patch.py
-      - name: v4.0 medya crash guard ve hazirlik kontrolunu uygula
-        run: python3 .github/scripts/v40_media_crash_guard_patch.py
-      - name: v4.1 taze MediaProjection izin akisini uygula
-        run: python3 .github/scripts/v41_fresh_projection_flow_patch.py
-      - name: v4.2 tam ekran MediaProjection ve foreground-safe baslatmayi uygula
-        run: python3 .github/scripts/v42_full_display_projection_patch.py
+      - run: python3 .github/scripts/v15_patch.py
+      - run: python3 .github/scripts/v20_fix.py
+      - run: python3 .github/scripts/v25_patch.py
+      - run: python3 .github/scripts/v26_intercom_patch.py
+      - run: python3 .github/scripts/v27_mic_selector_patch.py
+      - run: python3 .github/scripts/v28_noise_patch.py
+      - run: python3 .github/scripts/v29_direct_audio_patch.py
+      - run: python3 .github/scripts/v30_sco_wait_patch.py
+      - run: python3 .github/scripts/v31_live_command_patch.py
+      - run: python3 .github/scripts/v32_control_selector_patch.py
+      - run: python3 .github/scripts/v33_segment_recording_patch.py
+      - run: python3 .github/scripts/v34_audio_source_patch.py
+      - run: python3 .github/scripts/v35_phone_call_pause_patch.py
+      - run: python3 .github/scripts/v36_settings_scroll_patch.py
+      - run: python3 .github/scripts/v37_permissions_settings_patch.py
+      - run: python3 .github/scripts/v38_compact_settings_patch.py
+      - run: python3 .github/scripts/v39_self_fix.py
+      - run: python3 .github/scripts/v39_real_playback_capture_patch.py
+      - run: python3 .github/scripts/v40_media_crash_guard_patch.py
+      - run: python3 .github/scripts/v41_fresh_projection_flow_patch.py
+      - run: python3 .github/scripts/v42_full_display_projection_patch.py
+      - name: v4.3 resmi MediaProjection sirasi ve crash diagnostics
+        run: python3 .github/scripts/v43_projection_order_diagnostics_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: MotoCam v4.2 APK derle
+      - name: MotoCam v4.3 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v4.2-APK
+          name: MotoCam-v4.3-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
