@@ -58,18 +58,19 @@ jobs:
       - run: python3 .github/scripts/v40_media_crash_guard_patch.py
       - run: python3 .github/scripts/v41_fresh_projection_flow_patch.py
       - run: python3 .github/scripts/v42_full_display_projection_patch.py
-      - name: v4.3 resmi MediaProjection sirasi ve crash diagnostics
-        run: python3 .github/scripts/v43_projection_order_diagnostics_patch.py
+      - run: python3 .github/scripts/v43_projection_order_diagnostics_patch.py
+      - name: v4.4 foreground service izinlerini duzelt
+        run: python3 .github/scripts/v44_foreground_permissions_fix.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: MotoCam v4.3 APK derle
+      - name: MotoCam v4.4 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v4.3-APK
+          name: MotoCam-v4.4-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
