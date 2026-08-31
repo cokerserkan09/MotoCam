@@ -70,16 +70,18 @@ jobs:
         run: python3 .github/scripts/v48_concurrent_probe_patch.py
       - name: v4.9 Camera2 dogrudan on arka kamera testi
         run: python3 .github/scripts/v49_camera2_probe_patch.py
+      - name: v4.10 Camera2 gercek cift stream session testi
+        run: python3 .github/scripts/v410_camera2_stream_probe_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: MotoCam v4.9 APK derle
+      - name: MotoCam v4.10 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v4.9-APK
+          name: MotoCam-v4.10-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
