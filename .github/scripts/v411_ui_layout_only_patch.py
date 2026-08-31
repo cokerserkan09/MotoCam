@@ -5,6 +5,25 @@ kt=Path('motocam/app/src/main/java/com/motocam/app/MainActivity.kt')
 s=kt.read_text(encoding='utf-8')
 
 # UI-only patch: no recording/camera/audio/voice/diagnostics logic is changed.
+# Do not assume a generated ViewBinding name for the keep-screen switch: locate it by visible text.
+helper=r'''
+    private fun findKeepScreenSwitchView(): android.view.View? {
+        return try {
+            val found = java.util.ArrayList<android.view.View>()
+            binding.root.findViewsWithText(found, "ekran", android.view.View.FIND_VIEWS_WITH_TEXT)
+            found.firstOrNull { v ->
+                v is android.widget.CompoundButton &&
+                    ((v.text?.toString()?.lowercase(java.util.Locale.ROOT)?.contains("ekran") == true) ||
+                     (v.contentDescription?.toString()?.lowercase(java.util.Locale.ROOT)?.contains("ekran") == true))
+            }
+        } catch (_: Throwable) { null }
+    }
+'''
+if 'private fun findKeepScreenSwitchView()' not in s:
+    anchor='    private fun showFeatureSettings()'
+    if anchor not in s: raise SystemExit('Ozellikler fonksiyon anchor bulunamadi')
+    s=s.replace(anchor,helper+'\n'+anchor,1)
+
 needle='        applyCameraFeatureMode()'
 ui=r'''        // v4.11 UI-only main screen arrangement.
         try {
@@ -14,12 +33,12 @@ ui=r'''        // v4.11 UI-only main screen arrangement.
 
             val voice = binding.switchVoice
             val stabilization = binding.switchStabilization
-            val keepScreen = binding.switchKeepScreenOn
+            val keepScreen = findKeepScreenSwitchView()
             val controlParent = voice.parent as? android.view.ViewGroup
 
-            // Remove the three switches from the main screen. Their original View objects,
+            // Remove available switches from the main screen. Their original View objects,
             // listeners and state remain intact and are shown inside Features when requested.
-            listOf(voice, stabilization, keepScreen).forEach { v ->
+            listOfNotNull<android.view.View>(voice, stabilization, keepScreen).forEach { v ->
                 (v.parent as? android.view.ViewGroup)?.removeView(v)
             }
 
@@ -69,7 +88,7 @@ if 'v4.11 UI-only main screen arrangement' not in s:
     if needle not in s: raise SystemExit('UI ekleme noktasi bulunamadi')
     s=s.replace(needle,needle+'\n'+ui,1)
 
-# Extend Features dialog with the existing three switches without replacing their listeners.
+# Extend Features dialog with the existing switches without replacing their listeners.
 old='''        androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Özellikler")
             .setSingleChoiceItems(modes, current) { dialog, which ->'''
@@ -77,7 +96,7 @@ new='''        val featureBox = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             val p=(16*resources.displayMetrics.density).toInt(); setPadding(p,p/2,p,p/2)
         }
-        listOf(binding.switchVoice, binding.switchStabilization, binding.switchKeepScreenOn).forEach { sw ->
+        listOfNotNull<android.view.View>(binding.switchVoice, binding.switchStabilization, findKeepScreenSwitchView()).forEach { sw ->
             (sw.parent as? android.view.ViewGroup)?.removeView(sw)
             featureBox.addView(sw)
         }
