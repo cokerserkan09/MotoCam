@@ -27,6 +27,11 @@ helper=r'''    private fun camera2DirectProbe(mode: String) {
             try { androidx.camera.lifecycle.ProcessCameraProvider.getInstance(this).get().unbindAll() } catch (_: Throwable) {}
             val opened = linkedMapOf<String, android.hardware.camera2.CameraDevice>()
             var finished = false
+            fun restoreSingleCameraSoon() {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    try { recreate() } catch (_: Throwable) {}
+                }, 700L)
+            }
             fun finishFailure(message: String) {
                 if (finished) return
                 finished = true
@@ -34,7 +39,7 @@ helper=r'''    private fun camera2DirectProbe(mode: String) {
                 featurePrefs.edit().putString("camera_mode", "single").apply()
                 binding.tvStatus.text = "Hazır • Tek Kamera"
                 reportMotoCamLogicIssue("Camera2 doğrudan ön+arka testi başarısız.\nSürüm: ${appVersionForDiagnostics()}\nCihaz: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\nCamera IDs: $ids\nÖn: $front Arka: $back\nCamera2 advertised concurrent: $advertised\n\n$message")
-                try { startCamera() } catch (_: Throwable) {}
+                restoreSingleCameraSoon()
             }
             fun successIfBoth() {
                 if (finished || opened.size < 2) return
@@ -44,8 +49,9 @@ helper=r'''    private fun camera2DirectProbe(mode: String) {
                 android.app.AlertDialog.Builder(this)
                     .setTitle("MotoCam Camera2 testi başarılı")
                     .setMessage("Telefon CameraX listesinde göstermese de Camera2 ile ön ve arka kamera aynı anda açılabildi.\n\nÖn kamera: $front\nArka kamera: $back\n\nBir sonraki aşamada bu yol üzerinden çift görüntü ve kayıt bağlanabilir.")
-                    .setPositiveButton("Tamam", null).show()
-                try { startCamera() } catch (_: Throwable) {}
+                    .setPositiveButton("Tamam") { _, _ -> restoreSingleCameraSoon() }
+                    .setOnCancelListener { restoreSingleCameraSoon() }
+                    .show()
             }
             fun open(id: String) {
                 manager.openCamera(id, object: android.hardware.camera2.CameraDevice.StateCallback() {
@@ -54,7 +60,6 @@ helper=r'''    private fun camera2DirectProbe(mode: String) {
                     override fun onError(camera: android.hardware.camera2.CameraDevice, error: Int) { camera.close(); finishFailure("CameraDevice.onError id=$id error=$error (1=IN_USE, 2=MAX_CAMERAS_IN_USE, 3=DISABLED, 4=DEVICE, 5=SERVICE)") }
                 }, null)
             }
-            // Android concurrent camera contract: iki kamerayı da oturum kurmadan önce açmayı dene.
             open(back)
             open(front)
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
@@ -63,7 +68,7 @@ helper=r'''    private fun camera2DirectProbe(mode: String) {
         } catch (t: Throwable) {
             featurePrefs.edit().putString("camera_mode", "single").apply()
             reportMotoCamLogicIssue("Camera2 doğrudan test exception. Sürüm: ${appVersionForDiagnostics()}\n${android.util.Log.getStackTraceString(t)}")
-            try { startCamera() } catch (_: Throwable) {}
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ try { recreate() } catch (_: Throwable) {} }, 700L)
         }
     }
 
