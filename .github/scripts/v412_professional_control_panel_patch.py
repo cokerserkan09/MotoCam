@@ -8,7 +8,6 @@ s=kt.read_text(encoding='utf-8')
 needle='        applyCameraFeatureMode()'
 ui=r'''        // v4.12 professional collapsible control panel (UI only)
         try {
-            // Remove old note text from the main screen.
             fun allViews(root: android.view.View): List<android.view.View> {
                 val out=java.util.ArrayList<android.view.View>()
                 fun walk(v: android.view.View) { out.add(v); if (v is android.view.ViewGroup) for(i in 0 until v.childCount) walk(v.getChildAt(i)) }
@@ -27,7 +26,6 @@ ui=r'''        // v4.12 professional collapsible control panel (UI only)
                 statusParent.removeView(status)
                 oldParent.removeView(start)
 
-                // Remove old Settings/Features buttons wherever v4.11 placed them.
                 val oldButtons=allViews(root).filterIsInstance<android.widget.Button>().filter {
                     val t=it.text?.toString()?.trim(); t=="AYARLAR" || t=="ÖZELLİKLER"
                 }
@@ -69,14 +67,13 @@ ui=r'''        // v4.12 professional collapsible control panel (UI only)
                     background=android.graphics.drawable.GradientDrawable().apply { cornerRadius=dp(12).toFloat(); setColor(0xFF292930L.toInt()); setStroke(dp(1),0xFF45454EL.toInt()) }
                     setOnClickListener { click() }
                 }
-                val settings=menuButton("⚙  AYARLAR") { showSettingsDialog() }
+                val settings=menuButton("⚙  AYARLAR") { showCommandSettings() }
                 val features=menuButton("☷  ÖZELLİKLER") { showFeatureSettings() }
                 menu.addView(settings,android.widget.LinearLayout.LayoutParams(-1,dp(58)).apply{bottomMargin=dp(6)})
                 menu.addView(features,android.widget.LinearLayout.LayoutParams(-1,dp(58)))
                 panel.addView(menu)
                 more.setOnClickListener { menu.visibility=if(menu.visibility==android.view.View.VISIBLE) android.view.View.GONE else android.view.View.VISIBLE }
 
-                // Keep the control panel at the bottom of its existing UI container.
                 oldParent.addView(panel,android.widget.LinearLayout.LayoutParams(-1,-2).apply{setMargins(dp(10),dp(8),dp(10),dp(10))})
             }
         } catch(t:Throwable) {
@@ -85,7 +82,6 @@ ui=r'''        // v4.12 professional collapsible control panel (UI only)
 '''
 if 'v4.12 professional collapsible control panel' not in s:
     if needle not in s: raise SystemExit('v4.12 UI anchor bulunamadi')
-    # Use the last onCreate-era application point to avoid modifying camera mode dialog logic.
     pos=s.find(needle)
     s=s[:pos+len(needle)]+'\n'+ui+s[pos+len(needle):]
 
