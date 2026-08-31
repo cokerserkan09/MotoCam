@@ -62,16 +62,18 @@ jobs:
       - run: python3 .github/scripts/v44_foreground_permissions_fix.py
       - name: v4.5 sesli durdurma ve mantik hata raporu
         run: python3 .github/scripts/v45_voice_stop_reliability_patch.py
+      - name: v4.6 yinelenen Vosk durdurma sonucunu duzelt
+        run: python3 .github/scripts/v46_voice_stop_dedupe_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: MotoCam v4.5 APK derle
+      - name: MotoCam v4.6 APK derle
         working-directory: motocam
         run: gradle assembleDebug --stacktrace
       - name: APK dosyasini yukle
         uses: actions/upload-artifact@v4
         with:
-          name: MotoCam-v4.5-APK
+          name: MotoCam-v4.6-APK
           path: motocam/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
