@@ -73,7 +73,7 @@ jobs:
       - name: v4.10 Camera2 gercek cift stream session testi
         run: python3 .github/scripts/v410_camera2_stream_probe_patch.py
       - name: v4.11 sadece arayuz yerlesimi
-        run: python3 .github/scripts/v411_ui_layout_patch.py
+        run: python3 .github/scripts/v411_ui_layout_only_patch.py
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
